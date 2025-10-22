@@ -1,5 +1,107 @@
 import math 
+import csv
 from tqdm import tqdm
+
+class EnergyCounter:
+    """Energy consumption counter for various operations"""
+    def __init__(self):
+        # Counter for different operations
+        self.dram_read_count = 0
+        self.dram_write_count = 0
+        self.sram_read_count = 0
+        self.sram_write_count = 0
+        self.pe_data_transfer_count = 0  # Data transfer between neighboring PEs
+        self.rf_read_count = 0
+        self.rf_write_count = 0
+        self.alu_operations_count = 0
+        
+        # Energy values per operation (임시 값들, 나중에 수정 가능)
+        self.energy_per_dram_read = 500.0    # pJ
+        self.energy_per_dram_write = 500.0   # pJ
+        self.energy_per_sram_read = 10.0      # pJ
+        self.energy_per_sram_write = 10.0     # pJ
+        self.energy_per_pe_transfer = 3.0    # pJ
+        self.energy_per_rf_read = 1.0        # pJ
+        self.energy_per_rf_write = 1.0       # pJ
+        self.energy_per_alu_op = 1.0         # pJ
+        
+    def increment_dram_read(self, count=1):
+        self.dram_read_count += count
+        
+    def increment_dram_write(self, count=1):
+        self.dram_write_count += count
+        
+    def increment_sram_read(self, count=1):
+        self.sram_read_count += count
+        
+    def increment_sram_write(self, count=1):
+        self.sram_write_count += count
+        
+    def increment_pe_data_transfer(self, count=1):
+        self.pe_data_transfer_count += count
+        
+    def increment_rf_read(self, count=1):
+        self.rf_read_count += count
+        
+    def increment_rf_write(self, count=1):
+        self.rf_write_count += count
+        
+    def increment_alu_operations(self, count=1):
+        self.alu_operations_count += count
+    
+    def calculate_total_energy(self):
+        """Calculate total energy consumption"""
+        total_energy = (
+            self.dram_read_count * self.energy_per_dram_read +
+            self.dram_write_count * self.energy_per_dram_write +
+            self.sram_read_count * self.energy_per_sram_read +
+            self.sram_write_count * self.energy_per_sram_write +
+            self.pe_data_transfer_count * self.energy_per_pe_transfer +
+            self.rf_read_count * self.energy_per_rf_read +
+            self.rf_write_count * self.energy_per_rf_write +
+            self.alu_operations_count * self.energy_per_alu_op
+        )
+        return total_energy
+    
+    def print_energy_breakdown(self):
+        """Print detailed energy breakdown"""
+        print("="*60)
+        print("ENERGY CONSUMPTION BREAKDOWN")
+        print("="*60)
+        print(f"DRAM Read Operations:     {self.dram_read_count:>10} x {self.energy_per_dram_read:>6.1f} pJ = {self.dram_read_count * self.energy_per_dram_read:>10.1f} pJ")
+        print(f"DRAM Write Operations:    {self.dram_write_count:>10} x {self.energy_per_dram_write:>6.1f} pJ = {self.dram_write_count * self.energy_per_dram_write:>10.1f} pJ")
+        print(f"SRAM Read Operations:     {self.sram_read_count:>10} x {self.energy_per_sram_read:>6.1f} pJ = {self.sram_read_count * self.energy_per_sram_read:>10.1f} pJ")
+        print(f"SRAM Write Operations:    {self.sram_write_count:>10} x {self.energy_per_sram_write:>6.1f} pJ = {self.sram_write_count * self.energy_per_sram_write:>10.1f} pJ")
+        print(f"PE Data Transfer:         {self.pe_data_transfer_count:>10} x {self.energy_per_pe_transfer:>6.1f} pJ = {self.pe_data_transfer_count * self.energy_per_pe_transfer:>10.1f} pJ")
+        print(f"RF Read Operations:       {self.rf_read_count:>10} x {self.energy_per_rf_read:>6.1f} pJ = {self.rf_read_count * self.energy_per_rf_read:>10.1f} pJ")
+        print(f"RF Write Operations:      {self.rf_write_count:>10} x {self.energy_per_rf_write:>6.1f} pJ = {self.rf_write_count * self.energy_per_rf_write:>10.1f} pJ")
+        print(f"ALU Operations:           {self.alu_operations_count:>10} x {self.energy_per_alu_op:>6.1f} pJ = {self.alu_operations_count * self.energy_per_alu_op:>10.1f} pJ")
+        print("-"*60)
+        print(f"TOTAL ENERGY:             {self.calculate_total_energy():>35.1f} pJ")
+        print("="*60)
+        
+    def save_to_csv(self, filename="energy_breakdown.csv"):
+        """Save energy breakdown to CSV file"""
+        with open(filename, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['Component', 'Operation_Count', 'Energy_per_Op_pJ', 'Total_Energy_pJ'])
+            writer.writerow(['DRAM_Read', self.dram_read_count, self.energy_per_dram_read, 
+                           self.dram_read_count * self.energy_per_dram_read])
+            writer.writerow(['DRAM_Write', self.dram_write_count, self.energy_per_dram_write, 
+                           self.dram_write_count * self.energy_per_dram_write])
+            writer.writerow(['SRAM_Read', self.sram_read_count, self.energy_per_sram_read, 
+                           self.sram_read_count * self.energy_per_sram_read])
+            writer.writerow(['SRAM_Write', self.sram_write_count, self.energy_per_sram_write, 
+                           self.sram_write_count * self.energy_per_sram_write])
+            writer.writerow(['PE_Data_Transfer', self.pe_data_transfer_count, self.energy_per_pe_transfer, 
+                           self.pe_data_transfer_count * self.energy_per_pe_transfer])
+            writer.writerow(['RF_Read', self.rf_read_count, self.energy_per_rf_read, 
+                           self.rf_read_count * self.energy_per_rf_read])
+            writer.writerow(['RF_Write', self.rf_write_count, self.energy_per_rf_write, 
+                           self.rf_write_count * self.energy_per_rf_write])
+            writer.writerow(['ALU_Operations', self.alu_operations_count, self.energy_per_alu_op, 
+                           self.alu_operations_count * self.energy_per_alu_op])
+            writer.writerow(['TOTAL', '', '', self.calculate_total_energy()])
 
 
 def sram_traffic(
@@ -13,6 +115,9 @@ def sram_traffic(
         sram_read_trace_file="sram_read.csv",
         sram_write_trace_file="sram_write.csv"
     ):
+
+    # Initialize energy counter
+    energy_counter = EnergyCounter()
 
     # Dimensions of output feature map channel
     E_h = math.floor((ifmap_h - filt_h + strides) / strides)
@@ -90,7 +195,8 @@ def sram_traffic(
                                             cycle       = cycles,
                                             num_rows    = dimension_rows,
                                             remaining   = rows_this_fold,
-                                            sram_read_trace_file = sram_read_trace_file
+                                            sram_read_trace_file = sram_read_trace_file,
+                                            energy_counter = energy_counter
                                             )
                 #print("Weights loaded by " + str(cycles) + " cycles")
                 data_out_cycles     = cycles    #Store this cycle for parallel readout
@@ -104,7 +210,8 @@ def sram_traffic(
                                             filt_h = filt_h, filt_w = filt_w,
                                             num_channels = num_channels,
                                             stride = strides, ifmap_base = ifmap_base,
-                                            sram_read_trace_file = sram_read_trace_file
+                                            sram_read_trace_file = sram_read_trace_file,
+                                            energy_counter = energy_counter
                                             )
                 cycles_ofmap        = gen_trace_ofmap(
                                             cycle = data_out_cycles,
@@ -116,7 +223,8 @@ def sram_traffic(
                                             num_ofmap_px = int(e2),
                                             filters_done = (v * dimension_cols),
                                             num_filter = num_filt,
-                                            sram_write_trace_file = sram_write_trace_file
+                                            sram_write_trace_file = sram_write_trace_file,
+                                            energy_counter = energy_counter
                                             ) 
 
                 #print("IFMAPS processed by " + str(cycles) + " cycles")
@@ -145,7 +253,8 @@ def sram_traffic(
                                 col_addr = col_addr_list, 
                                 parallel_window=parallel_window,
                                 filters_this_fold=cols_this_fold,
-                                sram_read_trace_file=sram_read_trace_file
+                                sram_read_trace_file=sram_read_trace_file,
+                                energy_counter=energy_counter
                                 )
 
             cycles_ifmap, rows_this_fold\
@@ -156,7 +265,8 @@ def sram_traffic(
                             filt_h = filt_h, filt_w = filt_w,
                             num_channels = num_channels, stride = strides,
                             parallel_window = parallel_window,
-                            sram_read_trace_file = sram_read_trace_file
+                            sram_read_trace_file = sram_read_trace_file,
+                            energy_counter = energy_counter
                             )
 
             cycles_ofmap = gen_trace_ofmap(
@@ -168,7 +278,8 @@ def sram_traffic(
                             num_ofmap_px = int(e2),
                             filters_done = int(v * max_parallel_window * dimension_cols),
                             num_filter = num_filt,
-                            sram_write_trace_file = sram_write_trace_file
+                            sram_write_trace_file = sram_write_trace_file,
+                            energy_counter = energy_counter
                             )
             cycles = max(cycles_ifmap, cycles_ofmap)
             del_cycl = cycles - prev_cycl
@@ -196,7 +307,7 @@ def sram_traffic(
     final = str(cycles)
     final_util = (util / compute_cycles) * 100
     #print("Compute finished at: " + str(final) + " cycles")
-    return (final, final_util)
+    return (final, final_util, energy_counter)
 
 
 def gen_filter_trace(
@@ -206,7 +317,8 @@ def gen_filter_trace(
         col_addr = [],
         parallel_window = 1,
         filters_this_fold = 4,
-        sram_read_trace_file = "sram_read.csv"
+        sram_read_trace_file = "sram_read.csv",
+        energy_counter = None
 ):
     outfile = open(sram_read_trace_file,'a')
  
@@ -232,15 +344,28 @@ def gen_filter_trace(
             entry = str(cycle) + ", " + prefix
             cycle += 1
             
+            # Count for this cycle
+            cycle_sram_reads = 0
+            cycle_rf_writes = 0
+            
             # In each cycle, for each column feed one weight
             for c in range(cols):
                 indx  = w * num_cols + c
                 entry += str(col_addr[indx]) + ", "         
                 col_addr[indx] += 1
+                
+                # WS: Filter weight loaded from SRAM to RF
+                cycle_sram_reads += 1
+                # cycle_rf_writes += 1  # Filter stored in RF
 
             if cols < num_cols:
                 for _ in range(c, num_cols):
                     entry += ", "
+            
+            # Update energy counters
+            if energy_counter:
+                energy_counter.increment_sram_read(cycle_sram_reads)
+                energy_counter.increment_rf_write(cycle_rf_writes)
 
             entry += "\n"
             outfile.write(entry)
@@ -256,7 +381,8 @@ def gen_ifmap_trace(
         filt_h = 3, filt_w = 3,
         num_channels = 3, stride = 1,
         parallel_window = 1,
-        sram_read_trace_file = "sram_read.csv"
+        sram_read_trace_file = "sram_read.csv",
+        energy_counter = None
 ):
     outfile = open(sram_read_trace_file,'a')
     postfix = ""
@@ -287,6 +413,12 @@ def gen_ifmap_trace(
         entry = str(cycle) + ", "
         cycle += 1    
 
+        # Count for this cycle
+        cycle_sram_reads = 0
+        cycle_rf_reads = 0  
+        cycle_alu_ops = 0
+        cycle_pe_transfers = 0
+
         #print("Cycle= " + str(cycle))
         #Inner loop for all the rows in array
         num_rows = r2c 
@@ -307,6 +439,24 @@ def gen_ifmap_trace(
             #print("Window = " + str(w))
             for ridx in range(l):
                 entry += str(row_entry[l - ridx -1]) + ", "
+                # WS: IFMAP data read from SRAM 
+                cycle_sram_reads += 1
+        
+        # WS: MAC operations with stationary filters
+        current_active_cols = min(e + 1, num_cols)
+
+        active_pes = used_rows * current_active_cols
+        if active_pes > 0:
+            cycle_rf_reads = active_pes     # Read filter weights
+            cycle_alu_ops = active_pes      # MAC operations
+            cycle_pe_transfers = used_rows * (current_active_cols - 1)  # PE-to-PE transfers
+        
+        # Update energy counters
+        if energy_counter:
+            energy_counter.increment_sram_read(cycle_sram_reads)
+            energy_counter.increment_rf_read(cycle_rf_reads)
+            energy_counter.increment_alu_operations(cycle_alu_ops)
+            energy_counter.increment_pe_data_transfer(cycle_pe_transfers)
 
         entry += postfix
         outfile.write(entry)
@@ -330,7 +480,8 @@ def gen_trace_filter_partial(
                     cycle=0,
                     num_rows=4,
                     remaining=4,
-                    sram_read_trace_file="sram_read.csv"
+                    sram_read_trace_file="sram_read.csv",
+                    energy_counter=None
 ):
         outfile = open(sram_read_trace_file, 'a')
         num_cols = len(col_addrs)
@@ -344,9 +495,22 @@ def gen_trace_filter_partial(
         for r in range(remaining):              # number of rows this cycle
             entry = str(cycle) + ", " + prefix
 
+            # Count for this cycle
+            cycle_sram_reads = 0
+            cycle_rf_writes = 0
+
             for c in range(num_cols):
                 entry += str(col_addrs[c]) + ", "
                 col_addrs[c] += 1
+                
+                # WS: Filter weight loaded from SRAM to RF
+                cycle_sram_reads += 1
+                cycle_rf_writes += 1
+            
+            # Update energy counters
+            if energy_counter:
+                energy_counter.increment_sram_read(cycle_sram_reads)
+                energy_counter.increment_rf_write(cycle_rf_writes)
             
             cycle += 1
             entry += "\n"
@@ -368,7 +532,8 @@ def gen_trace_ifmap_partial(
                     num_channels = 3,
                     stride = 1, 
                     ifmap_base = 0, ofmap_base = 2000000,
-                    sram_read_trace_file = "sram_read.csv"
+                    sram_read_trace_file = "sram_read.csv",
+                    energy_counter = None
 ):
     outfile = open(sram_read_trace_file, 'a')
     postfix = ""
@@ -398,6 +563,12 @@ def gen_trace_ifmap_partial(
         entry = str(cycle) + ", "
         cycle += 1    
 
+        # Count for this cycle
+        cycle_sram_reads = 0
+        cycle_rf_reads = 0
+        cycle_alu_ops = 0
+        cycle_pe_transfers = 0
+
         #print("Cycle= " + str(cycle))
         #Inner loop for all the rows in array
         num_rows = min(num_rows, remaining)
@@ -415,6 +586,22 @@ def gen_trace_ifmap_partial(
         l = len(row_entry)
         for ridx in range(l):
             entry += str(row_entry[l - ridx -1]) + ", "
+            # WS: IFMAP data read from SRAM
+            cycle_sram_reads += 1
+        
+        # WS: MAC operations with stationary filters
+        active_pes = num_rows * effective_cols
+        if active_pes > 0:
+            cycle_rf_reads = active_pes     # Read filter weights
+            cycle_alu_ops = active_pes      # MAC operations
+            cycle_pe_transfers = num_rows * max(effective_cols - 1, 0)  # PE-to-PE transfers
+        
+        # Update energy counters
+        if energy_counter:
+            energy_counter.increment_sram_read(cycle_sram_reads)
+            energy_counter.increment_rf_read(cycle_rf_reads)
+            energy_counter.increment_alu_operations(cycle_alu_ops)
+            energy_counter.increment_pe_data_transfer(cycle_pe_transfers)
 
         # In case of partial mapping
         # index > 0 implies that there is a partial sum generated from prev h_fold
@@ -460,7 +647,8 @@ def gen_trace_ofmap(
                     num_ofmap_px = 16,      # This is per ofmap channel
                     filters_done = 0,       # To track v fold
                     num_filter   = 8,       # To track if all filters have finished
-                    sram_write_trace_file = "sram_write.csv"
+                    sram_write_trace_file = "sram_write.csv",
+                    energy_counter = None
 ):
     outfile = open(sram_write_trace_file,'a')
     #cycle = num_cols + cycle     # Accounts for the time taken to reduce accross all cols
@@ -485,15 +673,33 @@ def gen_trace_ofmap(
         entry = str(cycle) + ", "
         cycle += 1
         
+        # Count for this cycle
+        cycle_sram_writes = 0
+        cycle_rf_reads = 0
+        cycle_pe_transfers = 0
+        
         done = filters_done
         for col in range(effective_cols):
             if done < num_filter:
                 a = e * num_filter + col                # z first row major
                 a = a + ofmap_add_offset + ofmap_base
                 entry += str(a) + ", "
+                
+                # WS: OFMAP write to SRAM
+                cycle_sram_writes += 1
+                # WS: Read accumulated result from RF before writing
+                cycle_rf_reads += 1
+                # WS: PE to PE transfer for accumulation. For 1 OFMAP px, (r2c - 1) PE transfers of psums are required 
+                cycle_pe_transfers += (window_size - 1)
             else: 
                 # Code should not enter this part
                 entry += "!, "
+        
+        # Update energy counters
+        if energy_counter:
+            energy_counter.increment_sram_write(cycle_sram_writes)
+            energy_counter.increment_rf_read(cycle_rf_reads)
+            energy_counter.increment_pe_data_transfer(cycle_pe_transfers)
 
         entry += "\n"
         outfile.write(entry)

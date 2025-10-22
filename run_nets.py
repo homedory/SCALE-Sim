@@ -83,8 +83,7 @@ def run_net( ifmap_sram_size=1,
         max_bw_log = bw_log
         detailed_log = name + ",\t"
 
-        bw_str, detailed_str, util, clk =  \
-            tg.gen_all_traces(  array_h = array_h,
+        result = tg.gen_all_traces(  array_h = array_h,
                                 array_w = array_w,
                                 ifmap_h = ifmap_h,
                                 ifmap_w = ifmap_w,
@@ -94,7 +93,7 @@ def run_net( ifmap_sram_size=1,
                                 num_filt = num_filters,
                                 strides = strides,
                                 data_flow = data_flow,
-                                word_size_bytes = 1,
+                                word_size_bytes = 2,
                                 filter_sram_size = filter_sram_size,
                                 ifmap_sram_size = ifmap_sram_size,
                                 ofmap_sram_size = ofmap_sram_size,
@@ -107,6 +106,16 @@ def run_net( ifmap_sram_size=1,
                                 dram_ifmap_trace_file= net_name + "_" + name + "_dram_ifmap_read.csv",
                                 dram_ofmap_trace_file= net_name + "_" + name + "_dram_ofmap_write.csv"
                             )
+        
+        # Handle both old and new return formats
+        if len(result) == 5:  # New format with energy counter
+            bw_str, detailed_str, util, clk, energy_counter = result
+            # Save energy breakdown to CSV if we have energy counter
+            if energy_counter and data_flow in ['os', 'ws', 'is', 'rs']:
+                energy_filename = net_name + "_" + name + "_energy.csv"
+                energy_counter.save_to_csv(energy_filename)
+        else:  # Old format without energy counter
+            bw_str, detailed_str, util, clk = result
 
         bw_log += bw_str
         bw.write(bw_log + "\n")

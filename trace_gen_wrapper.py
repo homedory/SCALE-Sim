@@ -3,6 +3,7 @@ import dram_trace as dram
 import sram_traffic_os as sram
 import sram_traffic_ws as sram_ws
 import sram_traffic_is as sram_is
+import sram_traffic_rs as sram_rs
 
 def gen_all_traces(
         array_h = 4,
@@ -14,7 +15,7 @@ def gen_all_traces(
 
         data_flow = 'os',
 
-        word_size_bytes = 1,
+        word_size_bytes = 2,
         filter_sram_size = 64, ifmap_sram_size= 64, ofmap_sram_size = 64,
 
         filt_base = 1000000, ifmap_base=0, ofmap_base = 2000000,
@@ -23,15 +24,17 @@ def gen_all_traces(
 
         dram_filter_trace_file = "dram_filter_read.csv",
         dram_ifmap_trace_file = "dram_ifmap_read.csv",
-        dram_ofmap_trace_file = "dram_ofmap_write.csv"
+        dram_ofmap_trace_file = "dram_ofmap_write.csv",
+        dram_psum_trace_file = "dram_ofmap_read.csv"
     ):
 
     sram_cycles = 0
     util        = 0
 
     print("Generating traces and bw numbers")
+    energy_counter = None
     if data_flow == 'os':
-        sram_cycles, util = \
+        sram_cycles, util, energy_counter = \
             sram.sram_traffic(
                 dimension_rows= array_h,
                 dimension_cols= array_w,
@@ -45,7 +48,7 @@ def gen_all_traces(
                 sram_write_trace_file=sram_write_trace_file
             )
     elif data_flow == 'ws':
-        sram_cycles, util = \
+        sram_cycles, util, energy_counter = \
             sram_ws.sram_traffic(
                 dimension_rows = array_h,
                 dimension_cols = array_w,
@@ -58,7 +61,7 @@ def gen_all_traces(
                 sram_write_trace_file = sram_write_trace_file
             )
     elif data_flow == 'is':
-        sram_cycles, util = \
+        sram_cycles, util, energy_counter = \
             sram_is.sram_traffic(
                 dimension_rows = array_h,
                 dimension_cols = array_w,
@@ -70,30 +73,87 @@ def gen_all_traces(
                 sram_read_trace_file = sram_read_trace_file,
                 sram_write_trace_file = sram_write_trace_file
             )
+    elif data_flow == 'rs':
+        sram_cycles, util, energy_counter = \
+            sram_rs.sram_traffic(
+                arr_h = array_h,
+                arr_w = array_w,
+                ifmap_h = ifmap_h, ifmap_w = ifmap_w,
+                filt_h = filt_h, filt_w = filt_w,
+                num_channels = num_channels,
+                strides = strides, num_filt = num_filt,
+                ofmap_base = ofmap_base, filt_base = filt_base, ifmap_base = ifmap_base,
+                sram_read_trace_file = sram_read_trace_file,
+                sram_write_trace_file = sram_write_trace_file
+            )
 
     #print("Generating DRAM traffic")
-    dram.dram_trace_read_v2(
-        sram_sz=ifmap_sram_size,
-        word_sz_bytes=word_size_bytes,
-        min_addr=ifmap_base, max_addr=filt_base,
-        sram_trace_file=sram_read_trace_file,
-        dram_trace_file=dram_ifmap_trace_file,
-    )
+    # Count DRAM operations if we have energy counter (OS dataflow)
+    if energy_counter is not None:
+        ifmap_dram_reads = dram.dram_trace_read_v2(
+            sram_sz=ifmap_sram_size,
+            word_sz_bytes=word_size_bytes,
+            min_addr=ifmap_base, max_addr=filt_base,
+            sram_trace_file=sram_read_trace_file,
+            dram_trace_file=dram_ifmap_trace_file,
+            return_count=True
+        )
 
-    dram.dram_trace_read_v2(
-        sram_sz= filter_sram_size,
-        word_sz_bytes= word_size_bytes,
-        min_addr=filt_base, max_addr=ofmap_base,
-        sram_trace_file= sram_read_trace_file,
-        dram_trace_file= dram_filter_trace_file,
-    )
+        filter_dram_reads = dram.dram_trace_read_v2(
+            sram_sz= filter_sram_size,
+            word_sz_bytes= word_size_bytes,
+            min_addr=filt_base, max_addr=ofmap_base,
+            sram_trace_file= sram_read_trace_file,
+            dram_trace_file= dram_filter_trace_file,
+            return_count=True
+        )
 
-    dram.dram_trace_write(
-        ofmap_sram_size= ofmap_sram_size,
-        data_width_bytes= word_size_bytes,
-        sram_write_trace_file= sram_write_trace_file,
-        dram_write_trace_file= dram_ofmap_trace_file
-    )
+        ofmap_dram_writes = dram.dram_trace_write(
+            ofmap_sram_size= ofmap_sram_size,
+            data_width_bytes= word_size_bytes,
+            sram_write_trace_file= sram_write_trace_file,
+            dram_write_trace_file= dram_ofmap_trace_file,
+            return_count=True
+        )
+        
+        # Update energy counter with DRAM operations
+        energy_counter.increment_dram_read(ifmap_dram_reads + filter_dram_reads)
+        energy_counter.increment_dram_write(ofmap_dram_writes)
+        
+        # Print energy breakdown now that DRAM counts are included
+        energy_counter.print_energy_breakdown()
+    else:
+        dram.dram_trace_read_v2(
+            sram_sz=ifmap_sram_size,
+            word_sz_bytes=word_size_bytes,
+            min_addr=ifmap_base, max_addr=filt_base,
+            sram_trace_file=sram_read_trace_file,
+            dram_trace_file=dram_ifmap_trace_file,
+        )
+
+        dram.dram_trace_read_v2(
+            sram_sz= filter_sram_size,
+            word_sz_bytes= word_size_bytes,
+            min_addr=filt_base, max_addr=ofmap_base,
+            sram_trace_file= sram_read_trace_file,
+            dram_trace_file= dram_filter_trace_file,
+        )
+
+        if data_flow == "rs":
+            dram.dram_trace_read_v2(
+            sram_sz= ofmap_sram_size,
+            word_sz_bytes= word_size_bytes,
+            min_addr=ofmap_base, max_addr=ofmap_base + filt_base,
+            sram_trace_file= sram_read_trace_file,
+            dram_trace_file= dram_psum_trace_file,
+            )
+
+        dram.dram_trace_write(
+            ofmap_sram_size= ofmap_sram_size,
+            data_width_bytes= word_size_bytes,
+            sram_write_trace_file= sram_write_trace_file,
+            dram_write_trace_file= dram_ofmap_trace_file
+        )
 
     print("Average utilization : \t"  + str(util) + " %")
     print("Cycles for compute  : \t"  + str(sram_cycles) + " cycles")
@@ -102,7 +162,7 @@ def gen_all_traces(
                                  sram_read_trace_file)
                                  #array_h, array_w)
 
-    return bw_numbers, detailed_log, util, sram_cycles
+    return bw_numbers, detailed_log, util, sram_cycles, energy_counter
 
 
 def gen_max_bw_numbers( dram_ifmap_trace_file, dram_filter_trace_file,
